@@ -8,7 +8,7 @@ APP_DIR = Path(__file__).resolve().parent
 MODEL_FILENAMES = (
     "finshield_model.pkl",
     "finshield_lgbm.pkl",
-    "finsheild_lgbm.pkl",  # legacy typo from notebook exports
+    "finsheild_lgbm.pkl", 
 )
 SEARCH_DIRS = (APP_DIR, APP_DIR / "models", Path.cwd(), Path.cwd() / "models")
 

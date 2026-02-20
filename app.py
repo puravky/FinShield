@@ -5,31 +5,51 @@ import numpy as np
 import streamlit as st
 
 APP_DIR = Path(__file__).resolve().parent
-MODEL_CANDIDATES = [
-    APP_DIR / "finshield_model.pkl", 
-    APP_DIR / "finshield_lgbm.pkl", 
-]
+MODEL_FILENAMES = (
+    "finshield_model.pkl",
+    "finshield_lgbm.pkl",
+    "finsheild_lgbm.pkl",  # legacy typo from notebook exports
+)
+SEARCH_DIRS = (APP_DIR, APP_DIR / "models", Path.cwd(), Path.cwd() / "models")
 
 
+@st.cache_resource
 def load_model():
+    candidates = []
+    seen = set()
+    for directory in SEARCH_DIRS:
+        for filename in MODEL_FILENAMES:
+            path = directory / filename
+            key = str(path.resolve()) if path.exists() else str(path)
+            if key in seen:
+                continue
+            seen.add(key)
+            candidates.append(path)
+
     errors = []
-    for model_path in MODEL_CANDIDATES:
+    for model_path in candidates:
         if not model_path.exists():
             continue
         try:
             return joblib.load(model_path), model_path.name
         except Exception as exc:
-            errors.append(f"{model_path.name}: {exc}")
+            errors.append(f"{model_path}: {exc}")
 
-    detail = "\n\n".join(errors) if errors else "No model file found."
-    st.error("Unable to load a model. Please check model files and dependencies.")
+    if errors:
+        detail = "\n\n".join(errors)
+    else:
+        attempted = "\n".join(str(path) for path in candidates)
+        detail = f"No model file found. Checked:\n{attempted}"
+
+    st.error("Unable to load a model. Ensure a .pkl model file is committed to the repo.")
     st.code(detail)
     st.stop()
 
 
 model, model_name = load_model()
 
-st.title("FinShield💳 - Fraud Risk Detector")
+st.title("💳 FinShield - Fraud Risk Detector")
+st.caption(f"Loaded model: {model_name}")
 st.write("Enter transaction details:")
 
 amount = st.number_input("Amount", min_value=0.0, value=0.0)
@@ -44,8 +64,8 @@ proba = float(model.predict_proba(input_data)[0][1])
 st.subheader(f"Fraud Risk: {proba * 100:.2f}%")
 
 if proba > 0.9:
-    st.error("High Risk Transaction 🚫")
+    st.error("High Risk Transaction 🚨")
 elif proba > 0.5:
     st.warning("Medium Risk Transaction ⚠️")
 else:
-    st.success("Low Risk Transaction ✅")
+    st.success("Low Risk Transaction ✳️")
